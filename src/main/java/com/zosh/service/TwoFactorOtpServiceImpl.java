@@ -2,36 +2,61 @@ package com.zosh.service;
 
 import com.zosh.modal.TwoFactorOTP;
 import com.zosh.modal.User;
+import com.zosh.repository.TwoFactorOtpRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-public class TwoFactorOtpServiceImpl implements TwoFactorOtpService{
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
 
 
-
+    @Autowired
+    private TwoFactorOtpRepository twoFactorOtpRepository;
 
 
     @Override
     public TwoFactorOTP createTwoFactorOtp(User user, String otp, String jwt) {
-        return null;
+
+        UUID uuid = UUID.randomUUID();
+
+        String id = uuid.toString();
+
+        TwoFactorOTP twoFactorOTP = new TwoFactorOTP();
+
+        twoFactorOTP.setOtp(otp);
+        twoFactorOTP.setJwt(jwt);
+        twoFactorOTP.setId(id);
+
+        twoFactorOTP.setUser(user);
+
+        return twoFactorOtpRepository.save(twoFactorOTP);
+
     }
 
     @Override
     public TwoFactorOTP findByUser(Long userId) {
-        return null;
+
+
+        return twoFactorOtpRepository.findByUserId(userId);
     }
 
     @Override
     public TwoFactorOTP findById(String id) {
+        Optional<TwoFactorOTP> opt = twoFactorOtpRepository.findById(id);
 
-        return null;
+        return opt.orElse(null);
     }
 
     @Override
     public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOTP, String otp) {
-        return false;
+        return twoFactorOTP.getOtp().equals(otp);
     }
 
     @Override
     public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOTP) {
-
+twoFactorOtpRepository.delete(twoFactorOTP);
     }
 }

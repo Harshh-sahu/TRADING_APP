@@ -1,8 +1,13 @@
 package com.zosh.controller;
 
 import com.zosh.config.JwtProvider;
+import com.zosh.modal.TwoFactorOTP;
 import com.zosh.response.AuthResponse;
 import com.zosh.service.CustomUserDetailsService;
+import com.zosh.service.EmailService;
+import com.zosh.service.TwoFactorOtpService;
+import com.zosh.utils.OtpUtils;
+import jakarta.validation.constraints.Email;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,10 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.zosh.modal.User;
 import com.zosh.repository.UserRepository;
@@ -28,6 +30,11 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private TwoFactorOtpService twoFactorOtpService;
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
@@ -83,7 +90,24 @@ String Password = user.getPassword();
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         String jwt = JwtProvider.generateToken(auth);
+User authuser = userRepository.findByEmail(userName);
+        if(user.getTwoFactorAuth().isEnabled()){
+            AuthResponse res = new AuthResponse();
+            res.setMessage("Two Factor Authentication is enabled");
+            res.setTwoFactorAuthEnaled(true);
+            String otp = OtpUtils.generateOTP();
 
+            TwoFactorOTP oldTwoFactorOTP  = twoFactorOtpService.findByUser(authuser.getId());
+            if(oldTwoFactorOTP!=null){
+                twoFactorOtpService.deleteTwoFactorOtp(oldTwoFactorOTP);
+            }
+
+            TwoFactorOTP newTwoFactorOtp = twoFactorOtpService.createTwoFactorOtp(authuser,otp,jwt);
+
+    emailService.sendVerificationOtpEmail(userName,otp);
+            res.setSession(newTwoFactorOtp.getId());
+            return new ResponseEntity<>(res,HttpStatus.ACCEPTED);
+        }
         AuthResponse res = new AuthResponse();
         res.setJwt(jwt);
         res.setStatus(true);
@@ -107,6 +131,32 @@ String Password = user.getPassword();
 
 
     }
+
+
+
+
+
+
+
+    public ResponseEntity<AuthResponse> verifySignInOtp(@PathVariable String otp,@RequestParam String id) throws Exception{
+
+        TwoFactorOTP twoFactorOTP= twoFactorOtpService.findById(id);
+
+        if(twoFactorOtpService.verifyTwoFactorOtp(twoFactorOTP,otp)){
+            AuthResponse res = new AuthResponse();
+            res.setMessage("Two Factor Authentication Verified");
+            res.setJwt(twoFactorOTP.getJwt());
+            res.setTwoFactorAuthEnaled(true);
+
+            return new ResponseEntity<>(res, HttpStatus.CREATED);
+
+        }
+        throw new Exception("Invalid OTP");
+
+
+    }
+
+
 
 
 }
