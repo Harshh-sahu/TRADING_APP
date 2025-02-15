@@ -7,6 +7,8 @@ import com.zosh.repository.ForgetPasswordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class ForgetPasswordServiceImpl implements ForgetPasswordService {
 
@@ -14,27 +16,40 @@ public class ForgetPasswordServiceImpl implements ForgetPasswordService {
     private ForgetPasswordRepository forgetPasswordRepository;
 
     @Override
-    public ForgetPasswordToken createToken(User user, String id, String otp, VerificationType verificationType, String sendTo) {
+    public ForgetPasswordToken createToken(User user,
+                                           String id,
+                                           String otp,
+                                           VerificationType verificationType,
+                                           String sendTo) {
 
         ForgetPasswordToken token = new ForgetPasswordToken();
 
+        token.setUser(user);
+        token.setSendTo(sendTo);
+        token.setVerificationType(verificationType);
+        token.setOtp(otp);
+        token.setId(id);
 
 
-        return null;
+
+
+        return forgetPasswordRepository.save(token);
     }
 
     @Override
     public ForgetPasswordToken findById(String id) {
-        return null;
+
+        Optional<ForgetPasswordToken> token = forgetPasswordRepository.findById(id);
+        return token.orElse(null);
     }
 
     @Override
     public ForgetPasswordToken findByUser(Long UserId) {
-        return null;
+        return forgetPasswordRepository.findByUserId(UserId);
     }
 
     @Override
     public void deleteToken(ForgetPasswordToken token) {
-
+forgetPasswordRepository.delete(token);
     }
 }
