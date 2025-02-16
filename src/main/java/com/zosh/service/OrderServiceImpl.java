@@ -2,10 +2,7 @@ package com.zosh.service;
 
 import com.zosh.domain.OrderStatus;
 import com.zosh.domain.OrderType;
-import com.zosh.modal.Coins;
-import com.zosh.modal.Order;
-import com.zosh.modal.OrderItem;
-import com.zosh.modal.User;
+import com.zosh.modal.*;
 import com.zosh.repository.OrderItemRepository;
 import com.zosh.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +16,8 @@ import java.util.List;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    @Autowired
+    private AssetService assetService;
     @Autowired
     private OrderItemRepository orderItemRepository;
     @Autowired
@@ -82,6 +81,16 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderType(OrderType.BUY);
           Order savedOrder = orderRepository.save(order);
           //create asset in wallet
+
+    Asset oldAsset = assetService.findAssetByUserIdAndCoinId(order.getUser().getId(),order.getOrderItem().getCoin().getId());
+    if(oldAsset==null){
+        assetService.createAsset(user,orderItem.getCoin(),orderItem.getQuantity());
+
+    }else {
+        assetService.updateAsset(oldAsset.getId(),quantity);
+
+    }
+
         return savedOrder;
     }
 
@@ -93,24 +102,34 @@ public class OrderServiceImpl implements OrderService {
         }
         double sellPrice = coins.getCurrentPrice();
 
-        double buyPrice = assetToSell.getPrice();
-        OrderItem orderItem = createOrderItem(coins,quantity,buyPrice,sellPrice);
-        Order order = createOrder(user,orderItem,OrderType.SELL);
-        orderItem.setOrder(order);
-        if(assetToSell.getQuantity()>=quantity){
-            order.setStatus(OrderStatus.SUCCESS);
-            order.setOrderType(OrderType.SELL);
-            Order savedOrder = orderRepository.save(order);
-            wallerService.payOrderPayment(order,user);
-            Asset updatedAsset = assetService.updateAsset(assetToSell.getId(),-quantity);
-            if(updatedAsset.getQuantity() *coins.getCurrentPrice()<=1){
-                assetService.deleteAsset(updatedAsset.getId());
+        Asset assetToSell = assetService.findAssetByUserIdAndCoinId(user.getId(),coins.getId());
+        double buyPrice = assetToSell.getBuyPrice();
+
+        if(assetToSell!=null) {
+
+            OrderItem orderItem = createOrderItem(coins, quantity, buyPrice, sellPrice);
+
+
+            Order order = createOrder(user, orderItem, OrderType.SELL);
+            orderItem.setOrder(order);
+            if (assetToSell.getQuantity() >= quantity) {
+                order.setStatus(OrderStatus.SUCCESS);
+                order.setOrderType(OrderType.SELL);
+                Order savedOrder = orderRepository.save(order);
+                wallerService.payOrderPayment(order, user);
+                Asset updatedAsset = assetService.updateAsset(
+                        assetToSell.getId(),-quantity
+                );
+                if (updatedAsset.getQuantity() * coins.getCurrentPrice() <= 1) {
+                    assetService.deleteAsset(updatedAsset.getId());
+                }
+                return savedOrder;
             }
-return savedOrder;
+
+            throw new Exception("Unsufficient Quantity to Sell !!");
+
         }
-
-        throw new Exception("Unsufficient Quantity to Sell !!");
-
+        throw new Exception("Asset not found !!");
 
     }
 
