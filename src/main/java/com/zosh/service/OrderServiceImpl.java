@@ -72,6 +72,7 @@ public class OrderServiceImpl implements OrderService {
             throw new Exception("quantity should be > 0");
 
         }
+        
         double buyPrice = coins.getCurrentPrice();
         OrderItem orderItem = createOrderItem(coins,quantity,buyPrice,0);
         Order order = createOrder(user,orderItem,OrderType.BUY);
