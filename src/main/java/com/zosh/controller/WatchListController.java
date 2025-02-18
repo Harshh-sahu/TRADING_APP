@@ -54,6 +54,8 @@ public class WatchListController {
 
 
         User user=userService.findUserProfileByJwt(jwt);
+        System.out.println("Looking for coin with ID: " + coinId);
+
         Coins coin=coinService.findById(coinId);
         Coins addedCoin = watchlistService.addItemToWatchList(coin, user);
         return ResponseEntity.ok(addedCoin);

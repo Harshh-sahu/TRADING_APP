@@ -18,8 +18,9 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
-@RequestMapping("/api/wallet")
 public class WalletController {
 
     @Autowired
@@ -44,14 +45,6 @@ public class WalletController {
 
 
 
-    @GetMapping("/api/wallet")
-    public ResponseEntity<Wallet> l(@RequestHeader("Authorization") String jwt) throws Exception {
-        User user = userService.findUserProfileByJwt(jwt);
-        Wallet wallet = wallerService.getUserWallet(user);
-
-
-        return new ResponseEntity<>(wallet, HttpStatus.ACCEPTED);
-    }
 
 
     @PutMapping("/api/wallet/{walletId}/transfer")
@@ -77,7 +70,7 @@ Wallet wallet = wallerService.walletToWalletTransfer(senderUser,receiverWallet,r
         return  new ResponseEntity<>(wallet, HttpStatus.ACCEPTED);
 
     }
-    @PutMapping("/api/wallet/deposite")
+    @PutMapping("/api/wallet/deposit")
     public ResponseEntity<Wallet> addMoneyToWallet(@RequestHeader("Authorization") String jwt,
                                                @RequestParam(name = "order_id")Long order_id,
                                                    @RequestParam(name = "payment_id")String paymentId
@@ -92,6 +85,9 @@ Wallet wallet = wallerService.walletToWalletTransfer(senderUser,receiverWallet,r
         Boolean status = paymentService.ProccedPaymentOrder(order,paymentId);
         PaymentResponse res = new PaymentResponse();
         res.setPayment_url("deposite success");
+        if(wallet.getBalance()==null){
+            wallet.setBalance(BigDecimal.valueOf(0));
+        }
         if(status){
             wallet = wallerService.addBalance(wallet,order.getAmount());
         }

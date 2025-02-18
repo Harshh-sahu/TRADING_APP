@@ -8,4 +8,5 @@ public interface WatchListRepository extends JpaRepository<Watchlist,Long> {
 
 
     Watchlist findByUserId(Long userId);
+
 }

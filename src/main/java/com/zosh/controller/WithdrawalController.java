@@ -7,6 +7,7 @@ import com.zosh.modal.WalletTransaction;
 import com.zosh.modal.Withdrawal;
 import com.zosh.service.UserService;
 import com.zosh.service.WallerService;
+import com.zosh.service.WalletTransactionService;
 import com.zosh.service.WithdrawalService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,9 +26,11 @@ public class WithdrawalController {
 
     @Autowired
     private UserService userService;
-//
-//    @Autowired
-//    private WalletTransactionService walletTransactionService;
+    @Autowired
+    private WalletTransactionService walletTransactionService;
+
+
+
 
     @PostMapping("/api/withdrawal/{amount}")
     public ResponseEntity<?> withdrawalRequest(
@@ -38,13 +41,13 @@ public class WithdrawalController {
 
         Withdrawal withdrawal=withdrawalService.requestWithdrawal(amount,user);
         walletService.addBalance(userWallet, -withdrawal.getAmount());
-//
-//        WalletTransaction walletTransaction = walletTransactionService.createTransaction(
-//                userWallet,
-//                WalletTransactionType.WITHDRAWAL,null,
-//                "bank account withdrawal",
-//                withdrawal.getAmount()
-//        );
+
+        WalletTransaction walletTransaction = walletTransactionService.createTransaction(
+                userWallet,
+                WalletTransactionType.WITHDRAWAL,null,
+                "bank account withdrawal",
+                withdrawal.getAmount()
+        );
 
         return new ResponseEntity<>(withdrawal, HttpStatus.OK);
     }

@@ -25,22 +25,22 @@ public class CoinController {
 
 
 @GetMapping
-    ResponseEntity<List<Coins>>getCoinList(@RequestParam("page") int page) throws Exception {
-        List<Coins>coins = coinService.getCoinList(page);
+    ResponseEntity<List<Coins>>getCoinList(@RequestParam(required = false,name = "page") Integer page) throws Exception {
+    if (page == null) {
+        page = 0; // Provide a default value if missing
+    }
+    List<Coins>coins = coinService.getCoinList(page);
         return new ResponseEntity<>(coins, HttpStatus.ACCEPTED);
 
     }
     @GetMapping("/{coinId}/chart")
-    ResponseEntity<JsonNode>getMarketChart(@PathVariable String coindId,
-                                              @RequestParam("days") int days) throws Exception {
+    ResponseEntity<JsonNode> getMarketChart(@PathVariable String coinId,
+                                            @RequestParam("days")int days) throws Exception {
+        String coins=coinService.getMarketChart(coinId,days);
+        JsonNode jsonNode = objectMapper.readTree(coins);
 
 
-
-        String res = coinService.getMarketChart(coindId,days);
-        JsonNode jsonNode = objectMapper.readTree(res);
-        return new ResponseEntity<>(jsonNode, HttpStatus.ACCEPTED);
-
-    }
+        return ResponseEntity.ok(jsonNode);}
 
 
 

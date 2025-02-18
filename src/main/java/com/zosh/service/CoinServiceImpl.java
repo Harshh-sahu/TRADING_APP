@@ -55,68 +55,113 @@ public class CoinServiceImpl implements CoinService {
 
     @Override
     public String getMarketChart(String coinId, int days) throws Exception {
+        String url = "https://api.coingecko.com/api/v3/coins/"+coinId+"/market_chart?vs_currency=usd&days="+days;
 
-        String url ="https://api.coingecko.com/api/v3/coins/"+coinId+"market_chart?vs_currency=usd&days="+days;
         RestTemplate restTemplate = new RestTemplate();
         try {
             HttpHeaders headers = new HttpHeaders();
-            HttpEntity<String> entity = new HttpEntity<>("parameters",headers);
-            ResponseEntity<String>response = restTemplate.exchange(url, HttpMethod.GET,entity,String.class
-            );
-          return  response.getBody();
-        }catch (HttpClientErrorException | HttpServerErrorException e){
-            throw new Exception("Error while fetching data from coingecko");
 
+            HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
 
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            System.err.println("Error: " + e);
+            // Handle error accordingly
+//            return null;
+            throw new Exception("you are using free plan");
         }
+
     }
 
     @Override
     public String getCoinDetails(String coinId) throws Exception {
-        String url ="https://api.coingecko.com/api/v3/coins/"+coinId;
+        String baseUrl ="https://api.coingecko.com/api/v3/coins/"+coinId;
+
+        System.out.println("------------------ get coin details base url "+baseUrl);
+        HttpHeaders headers = new HttpHeaders();
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+
         RestTemplate restTemplate = new RestTemplate();
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            HttpEntity<String> entity = new HttpEntity<>("parameters",headers);
-            ResponseEntity<String>response = restTemplate.exchange(url, HttpMethod.GET,entity,String.class
-            );
-            JsonNode jsonNode = objectMapper.readTree(response.getBody());
-            Coins coin = new Coins();
-            coin.setId(jsonNode.get("id").asText());
-            coin.setName(jsonNode.get("name").asText());
-            coin.setSymbol(jsonNode.get("symbol").asText());
-            coin.setImage(jsonNode.get("image").get("large").asText());
-            JsonNode marketData = jsonNode.get("market_data");
+        ResponseEntity<String> response = restTemplate.exchange(baseUrl, HttpMethod.GET, entity, String.class);
 
-            coin.setCurrentPrice(marketData.get("current_price").get("usd").asDouble());
-            coin.setMarketCap(marketData.get("market_cap").get("usd").asLong());
-            coin.setMarketCapRank(marketData.get("market_cap_rank").asInt());
-            coin.setTotalVolume(marketData.get("total_volume").get("usd").asLong());
-            coin.setHigh24h(marketData.get("high_24h").get("usd").asDouble());
-            coin.setLow24h(marketData.get("low_24h").get("usd").asDouble());
-            coin.setPriceChange24h(marketData.get("price_change_24h").get("usd").asDouble());
-            coin.setPriceChangePercentage24h(marketData.get("price_change_24h").get("usd").asDouble());
-            coin.setMarketCapChange24h(marketData.get("market_cap_change_24h").asLong());
-            coin.setMarketCapChangePercentage24h(marketData.get("market_cap_change_percentage_24h").asLong());
-            coin.setTotalSupply(marketData.get("total_supply").asLong());
+//        Coin coins = objectMapper.readValue(response.getBody(), new TypeReference<>() {
+//        });
+//        coinRepository.save(coins);
+        JsonNode jsonNode = objectMapper.readTree(response.getBody());
+        jsonNode.get("image").get("large");
+        System.out.println(jsonNode.get("image").get("large"));
 
-            coinRepository.save(coin);
+        Coins coin = new Coins();
 
-            return  response.getBody();
-        }catch (HttpClientErrorException | HttpServerErrorException e){
-            throw new Exception("Error while fetching data from coingecko");
+        coin.setId(jsonNode.get("id").asText());
+        coin.setSymbol(jsonNode.get("symbol").asText());
+        coin.setName(jsonNode.get("name").asText());
+        coin.setImage(jsonNode.get("image").get("large").asText());
 
+        JsonNode marketData = jsonNode.get("market_data");
 
-        }
+        coin.setCurrentPrice(marketData.get("current_price").get("usd").asDouble());
+        coin.setMarketCap(marketData.get("market_cap").get("usd").asLong());
+        coin.setMarketCapRank(jsonNode.get("market_cap_rank").asInt());
+        coin.setTotalVolume(marketData.get("total_volume").get("usd").asLong());
+        coin.setHigh24h(marketData.get("high_24h").get("usd").asDouble());
+        coin.setLow24h(marketData.get("low_24h").get("usd").asDouble());
+        coin.setPriceChange24h(marketData.get("price_change_24h").asDouble());
+        coin.setPriceChangePercentage24h(marketData.get("price_change_percentage_24h").asDouble());
+        coin.setMarketCapChange24h(marketData.get("market_cap_change_24h").asLong());
+        coin.setMarketCapChangePercentage24h(marketData.get("market_cap_change_percentage_24h").asDouble());
+        coin.setCirculatingSupply(marketData.get("circulating_supply").asLong());
+        coin.setTotalSupply(marketData.get("total_supply").asLong());
+
+        coinRepository.save(coin);
+        return response.getBody();
     }
 
     @Override
     public Coins findById(String coinId) throws Exception {
+        Optional<Coins> optionalCoin = coinRepository.findById(coinId);
 
-        Optional<Coins> optionalcoin= coinRepository.findById(coinId);
-if(optionalcoin.isEmpty())throw new Exception("COIN NOT FOUND");
-return  optionalcoin.get();
+        if (optionalCoin.isPresent()) {
+            return optionalCoin.get();
+        }
+
+        // Fetch coin from CoinGecko API if not found in the database
+        Coins fetchedCoin = fetchCoinFromApi(coinId);
+        if (fetchedCoin != null) {
+            coinRepository.save(fetchedCoin);
+            return fetchedCoin;
+        }
+
+        throw new Exception("invalid coin id");
     }
+
+    // Helper method to fetch coin from CoinGecko
+    private Coins fetchCoinFromApi(String coinId) throws Exception {
+        String url = "https://api.coingecko.com/api/v3/coins/" + coinId;
+        RestTemplate restTemplate = new RestTemplate();
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+            JsonNode jsonNode = objectMapper.readTree(response.getBody());
+
+            Coins coin = new Coins();
+            coin.setId(jsonNode.get("id").asText());
+            coin.setSymbol(jsonNode.get("symbol").asText());
+            coin.setName(jsonNode.get("name").asText());
+            coin.setImage(jsonNode.get("image").get("large").asText());
+            coin.setCurrentPrice(jsonNode.get("market_data").get("current_price").get("usd").asDouble());
+
+            return coin;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            return null;  // If the coin doesn't exist on CoinGecko, return null
+        }
+    }
+
 
     @Override
     public String searchCoin(String keyword) throws Exception {
@@ -137,8 +182,7 @@ return  optionalcoin.get();
 
     @Override
     public String getTop50CoinsByMarketCapRank() throws Exception {
-        String url ="https://api.coingecko.com/api/v3/coins/market/vs_currency=usd&per_page=50&page=1";
-        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&page=1&per_page=50";        RestTemplate restTemplate = new RestTemplate();
         try {
             HttpHeaders headers = new HttpHeaders();
             HttpEntity<String> entity = new HttpEntity<>("parameters",headers);

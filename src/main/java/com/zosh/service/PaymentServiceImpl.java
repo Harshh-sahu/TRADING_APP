@@ -31,12 +31,11 @@ public class PaymentServiceImpl implements PaymentService{
    @Value("${stripe.api.key}")
 private String stripeSecretKey;
 
-   @Value("${razorpay.api.key}")
-   private String apiKey;
+    @Value("${razorpay.api.key}")
+    private String apiKey;
 
-   @Value("${razorpay.api.secret}")
-   private String apiSecretKey;
-
+    @Value("${razorpay.api.secret}")
+    private String apiSecret;
 
     @Override
     public PaymentOrder createOrder(User user, Long amount, PaymentMethod paymentMethod) {
@@ -47,7 +46,7 @@ paymentOrder.setUser(user);
 paymentOrder.setAmount(amount);
 paymentOrder.setPaymentMethod(paymentMethod);
 
-
+paymentOrder.setStatus(PaymentOrderStatus.PENDING);
         return paymentOrderRepository.save(paymentOrder);
     }
 
@@ -61,10 +60,12 @@ paymentOrder.setPaymentMethod(paymentMethod);
 
     @Override
     public Boolean ProccedPaymentOrder(PaymentOrder paymentOrder, String paymentId) throws RazorpayException {
-
+if(paymentOrder.getStatus()==null){
+    paymentOrder.setStatus(PaymentOrderStatus.PENDING);
+}
         if(paymentOrder.getStatus().equals(PaymentOrderStatus.PENDING)){
             if(paymentOrder.getPaymentMethod().equals(PaymentMethod.RAZORPAY)){
-                RazorpayClient razorpay = new RazorpayClient(apiKey,apiSecretKey);
+                RazorpayClient razorpay = new RazorpayClient(apiKey,apiSecret);
                 Payment payment = razorpay.payments.fetch(paymentId);
                 Integer amount  = payment.get("amount");
                 String status = payment.get("status");
@@ -92,7 +93,7 @@ paymentOrder.setPaymentMethod(paymentMethod);
         Long Amount = amount*100;
             try {
                 // Instantiate a Razorpay client with your key ID and secret
-                RazorpayClient razorpay = new RazorpayClient(apiKey, apiSecretKey);
+                RazorpayClient razorpay = new RazorpayClient(apiKey, apiSecret);
 
                 JSONObject paymentLinkRequest = new JSONObject();
                 paymentLinkRequest.put("amount",amount);
@@ -115,7 +116,7 @@ paymentOrder.setPaymentMethod(paymentMethod);
                 paymentLinkRequest.put("reminder_enable",true);
 
                 // Set the callback URL and method
-                paymentLinkRequest.put("callback_url","http://localhost:5173/wallet/"+orderId);
+                paymentLinkRequest.put("callback_url","http://localhost:5173/wallet?order_id="+orderId);
                 paymentLinkRequest.put("callback_method","get");
 
                 // Create the payment link using the paymentLink.create() method

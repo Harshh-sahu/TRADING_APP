@@ -11,6 +11,7 @@ public interface CoinService {
     String getMarketChart(String coinId,int days) throws Exception;
     String getCoinDetails(String coinId) throws Exception;
 
+
     Coins findById(String coinId) throws Exception;
 
     String searchCoin(String keyword) throws Exception;

@@ -6,6 +6,7 @@ import com.zosh.response.AuthResponse;
 import com.zosh.service.CustomUserDetailsService;
 import com.zosh.service.EmailService;
 import com.zosh.service.TwoFactorOtpService;
+import com.zosh.service.WatchListService;
 import com.zosh.utils.OtpUtils;
 import jakarta.validation.constraints.Email;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class AuthController {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Autowired
+    private WatchListService watchListService;
+
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@RequestBody  User user) throws Exception {
 
@@ -57,7 +61,7 @@ public class AuthController {
 
         User savedUser = userRepository.save(newUser);
 
-
+   watchListService.createWatchList(savedUser);
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 user.getEmail(),
                 user.getPassword()

@@ -68,7 +68,7 @@ public class OrderServiceImpl implements OrderService {
 
 @Transactional
     public Order buyAsset(Coins coins,double quantity,User user) throws Exception {
-        if(quantity >0){
+        if(quantity <0){
             throw new Exception("quantity should be > 0");
 
         }
@@ -97,7 +97,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     public Order sellAsset(Coins coins,double quantity,User user) throws Exception {
-        if(quantity >0){
+        if(quantity <0){
             throw new Exception("quantity should be > 0");
 
         }
